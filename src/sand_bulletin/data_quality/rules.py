@@ -58,6 +58,11 @@ PERCENT_COLUMNS_BY_KIND = {
     DatasetKind.OPERATIONS: ("referral_feedback_rate",),
 }
 
+STATIC_SNAPSHOT_DATE_COLUMNS_BY_KIND = {
+    DatasetKind.GOVERNANCE: ("protocol_last_updated",),
+    DatasetKind.HEALTHCARE_WORKERS: ("last_neonatal_training_date",),
+}
+
 CLINICAL_REPORT_VALUE_COLUMNS = tuple(
     column
     for column in (
@@ -124,6 +129,7 @@ def validate_upload_batch(manifest: UploadBatchManifest) -> DataQualitySummary:
     issues.extend(_check_duplicate_clinical_months(manifest))
     issues.extend(_check_logical_consistency(manifest))
     issues.extend(_check_percentage_ranges(manifest))
+    issues.extend(_check_static_snapshot_dates(manifest))
     issues.extend(_check_reporting_quality(manifest))
     issues.extend(_check_outliers(manifest))
     return DataQualitySummary(issues=issues)
@@ -365,6 +371,40 @@ def _check_percentage_ranges(manifest: UploadBatchManifest) -> list[DataQualityI
                             facility_id=_optional_str(row.get("facility_id")),
                         )
                     )
+    return issues
+
+
+def _check_static_snapshot_dates(manifest: UploadBatchManifest) -> list[DataQualityIssue]:
+    """Flag static facility context rows dated after the clinical reporting period."""
+
+    period_end = manifest.reporting_period_end
+    if period_end is None:
+        return []
+
+    issues: list[DataQualityIssue] = []
+    for kind, columns in STATIC_SNAPSHOT_DATE_COLUMNS_BY_KIND.items():
+        dataset = manifest.datasets[kind]
+        upload = manifest.uploads[kind]
+        for row_number, row in _iter_rows(dataset.frame):
+            for column in columns:
+                value = _optional_date(row.get(column))
+                if value is None or value <= period_end:
+                    continue
+                issues.append(
+                    _issue(
+                        manifest,
+                        kind,
+                        upload.upload_id,
+                        row_number,
+                        "future_static_snapshot_date",
+                        IssueSeverity.MEDIUM,
+                        column,
+                        value.isoformat(),
+                        "Static facility context dates should not be after the clinical bulletin end date when used for period interpretation.",
+                        "Confirm whether the static file is a current snapshot. If so, interpret readiness and governance scores as latest-available context, not strictly period-valid values.",
+                        facility_id=_optional_str(row.get("facility_id")),
+                    )
+                )
     return issues
 
 

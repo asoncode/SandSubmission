@@ -115,6 +115,27 @@ class DataQualityTests(unittest.TestCase):
             )
         )
 
+    def test_future_static_snapshot_dates_are_flagged(self) -> None:
+        manifest = build_upload_batch_manifest(DATA_DIR, tenant_id="sand", country_code="RWA")
+        summary = validate_upload_batch(manifest)
+
+        issues = [
+            issue
+            for issue in summary.issues
+            if issue.issue_type == "future_static_snapshot_date"
+        ]
+
+        self.assertGreater(len(issues), 0)
+        self.assertTrue(
+            all(issue.severity == IssueSeverity.MEDIUM for issue in issues)
+        )
+        self.assertTrue(
+            any(issue.affected_column == "protocol_last_updated" for issue in issues)
+        )
+        self.assertTrue(
+            any(issue.affected_column == "last_neonatal_training_date" for issue in issues)
+        )
+
     def test_issue_records_are_database_ready(self) -> None:
         manifest = build_upload_batch_manifest(DATA_DIR, tenant_id="sand", country_code="RWA")
         summary = validate_upload_batch(manifest)

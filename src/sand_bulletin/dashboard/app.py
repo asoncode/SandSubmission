@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+from textwrap import dedent
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from sand_bulletin.config import get_settings
@@ -32,18 +34,7 @@ def main() -> None:
     settings = get_settings()
     _inject_styles()
 
-    st.markdown(
-        """
-        <div class="app-hero">
-          <div>
-            <div class="eyebrow">Ministry Operations View</div>
-            <h1>Sand Health Bulletin</h1>
-            <p>Decision dashboard backed by validated report-ready metrics.</p>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(_hero_markup(), unsafe_allow_html=True)
 
     with st.sidebar:
         st.header("Data")
@@ -87,7 +78,7 @@ def main() -> None:
         _trends_tab(dataset.metrics_frame)
 
     with tabs[4]:
-        _map_tab(data_dir)
+        _map_tab(data_dir, dataset.metrics_frame)
 
     with tabs[5]:
         _report_tab(
@@ -331,16 +322,193 @@ def _trends_tab(metrics: pd.DataFrame) -> None:
             )
 
 
-def _map_tab(data_dir: Path) -> None:
+def _map_tab(data_dir: Path, metrics: pd.DataFrame) -> None:
     st.subheader("Facility Map")
     manifest = build_upload_batch_manifest(data_dir)
     facilities = manifest.datasets[DatasetKind.FACILITIES].frame.copy()
-    map_frame = facilities.rename(columns={"gps_lat": "lat", "gps_lon": "lon"})
-    st.map(map_frame[["lat", "lon"]])
+    map_frame = _facility_map_frame(facilities, metrics)
+    if map_frame.empty:
+        st.warning("No facility coordinates are available for mapping.")
+        return
+
+    province_options = ["All", *sorted(map_frame["province"].dropna().unique())]
+    risk_options = ["All", *sorted(map_frame["risk_band"].dropna().unique())]
+    filters = st.columns(3)
+    province = filters[0].selectbox("Province", province_options)
+    risk_band = filters[1].selectbox("Risk band", risk_options)
+    min_deliveries = filters[2].slider(
+        "Minimum deliveries",
+        min_value=0,
+        max_value=int(map_frame["total_deliveries"].fillna(0).max()),
+        value=0,
+        step=25,
+    )
+
+    filtered = map_frame[map_frame["total_deliveries"].fillna(0) >= min_deliveries].copy()
+    if province != "All":
+        filtered = filtered[filtered["province"] == province]
+    if risk_band != "All":
+        filtered = filtered[filtered["risk_band"] == risk_band]
+
+    if filtered.empty:
+        st.info("No facilities match the selected map filters.")
+        return
+
+    _coordinate_quality_notice(filtered, province)
+
+    fig = px.scatter_mapbox(
+        filtered,
+        lat="lat",
+        lon="lon",
+        color="risk_band",
+        size="marker_size",
+        hover_name="facility_label",
+        hover_data={
+            "facility_id": True,
+            "district": True,
+            "province": True,
+            "tier_level": True,
+            "total_deliveries": ":,.0f",
+            "neonatal_mortality_rate_per_1000_live_births": ":.1f",
+            "neonatal_readiness_score": ":.1f",
+            "facility_vulnerability_score": ":.1f",
+            "priority_score": ":.1f",
+            "lat": False,
+            "lon": False,
+            "marker_size": False,
+        },
+        color_discrete_map={
+            "Critical": "#b91c1c",
+            "High": "#dc6b19",
+            "Moderate": "#d6a21c",
+            "Low": "#16865a",
+            "Unknown": "#64748b",
+        },
+        zoom=7.2,
+        height=620,
+    )
+    fig.update_layout(
+        mapbox_style="carto-darkmatter",
+        margin={"l": 0, "r": 0, "t": 0, "b": 0},
+        legend_title_text="Vulnerability band",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(
+        "Hover over a facility to see name, district, delivery volume, NMR, readiness, vulnerability, and priority score. "
+        "Point size reflects delivery volume. Coordinates are plotted from the facility source file as provided."
+    )
+
+    st.markdown("### Facilities on Map")
     st.dataframe(
-        facilities[["facility_id", "facility_name", "district", "province", "tier_level"]],
+        filtered[
+            [
+                "facility_label",
+                "district",
+                "province",
+                "tier_level",
+                "total_deliveries",
+                "neonatal_mortality_rate_per_1000_live_births",
+                "neonatal_readiness_score",
+                "facility_vulnerability_score",
+                "priority_score",
+                "risk_band",
+            ]
+        ].sort_values(["priority_score", "total_deliveries"], ascending=[False, False]),
         use_container_width=True,
         hide_index=True,
+        column_config={
+            "facility_label": "Facility",
+            "total_deliveries": st.column_config.NumberColumn("Deliveries", format="%.0f"),
+            "neonatal_mortality_rate_per_1000_live_births": st.column_config.NumberColumn(
+                "NMR / 1,000",
+                format="%.1f",
+            ),
+            "neonatal_readiness_score": st.column_config.NumberColumn("Readiness", format="%.1f"),
+            "facility_vulnerability_score": st.column_config.NumberColumn(
+                "Vulnerability",
+                format="%.1f",
+            ),
+            "priority_score": st.column_config.NumberColumn("Priority", format="%.1f"),
+        },
+    )
+
+
+def _facility_map_frame(facilities: pd.DataFrame, metrics: pd.DataFrame) -> pd.DataFrame:
+    metric_names = [
+        "total_deliveries",
+        "neonatal_mortality_rate_per_1000_live_births",
+        "neonatal_readiness_score",
+        "facility_vulnerability_score",
+    ]
+    table = facility_metric_table(metrics, metric_names)
+    frame = facilities.merge(table, on="facility_id", how="left")
+    frame = frame.rename(columns={"gps_lat": "lat", "gps_lon": "lon"})
+    frame = frame.dropna(subset=["lat", "lon"]).copy()
+    if frame.empty:
+        return frame
+
+    frame["priority_score"] = _map_priority_score(frame)
+    frame["facility_label"] = frame.apply(_facility_label, axis=1)
+    frame["risk_band"] = frame["facility_vulnerability_score"].apply(score_band)
+    volume = frame["total_deliveries"].fillna(0)
+    max_volume = max(float(volume.max() or 1), 1.0)
+    frame["marker_size"] = 8 + (volume / max_volume * 24)
+    return frame
+
+
+def _facility_label(row: pd.Series) -> str:
+    name = row.get("facility_name")
+    facility_id = row.get("facility_id")
+    if pd.notna(name) and str(name).strip():
+        return f"{name} ({facility_id})"
+    return str(facility_id)
+
+
+def _coordinate_quality_notice(frame: pd.DataFrame, selected_province: str) -> None:
+    notes: list[str] = []
+    scope = selected_province if selected_province != "All" else "the selected facilities"
+    lat_span = float(frame["lat"].max() - frame["lat"].min())
+    lon_span = float(frame["lon"].max() - frame["lon"].min())
+
+    if selected_province == "Kigali City" and (lat_span > 0.45 or lon_span > 0.45):
+        notes.append(
+            "Kigali City facilities span a much larger area than expected for Kigali, which suggests "
+            "the sample GPS coordinates are synthetic, approximate, or mismatched."
+        )
+
+    district_spread = (
+        frame.groupby("district")
+        .agg(lat_span=("lat", lambda values: float(values.max() - values.min())), lon_span=("lon", lambda values: float(values.max() - values.min())), n=("facility_id", "count"))
+        .reset_index()
+    )
+    wide_districts = district_spread[
+        (district_spread["n"] > 1)
+        & ((district_spread["lat_span"] > 0.45) | (district_spread["lon_span"] > 0.45))
+    ]
+    if not wide_districts.empty:
+        examples = ", ".join(wide_districts["district"].head(4).tolist())
+        notes.append(
+            f"Some districts have facilities spread across implausibly large distances for {scope}; examples: {examples}."
+        )
+
+    if notes:
+        st.warning(
+            "Map coordinate quality warning: "
+            + " ".join(notes)
+            + " Treat this map as illustrative until facility coordinates are validated against an authoritative facility registry."
+        )
+
+
+def _map_priority_score(frame: pd.DataFrame) -> pd.Series:
+    max_deliveries = max(float(frame["total_deliveries"].fillna(0).max() or 1), 1.0)
+    max_mortality = max(
+        float(frame["neonatal_mortality_rate_per_1000_live_births"].fillna(0).max() or 1),
+        1.0,
+    )
+    return (
+        frame["neonatal_mortality_rate_per_1000_live_births"].fillna(0) / max_mortality * 40.0
+        + frame["total_deliveries"].fillna(0) / max_deliveries * 30.0
+        + frame["facility_vulnerability_score"].fillna(0) / 100.0 * 30.0
     )
 
 
@@ -594,6 +762,52 @@ def _reliability_banner(high_count: int, issue_count: int, allow_high: bool) -> 
         )
 
 
+def _hero_markup() -> str:
+    """Return the dashboard hero markup without Markdown code-block indentation."""
+
+    return dedent(
+        f"""
+        <div class="app-hero">
+          <div class="brand-block">
+            {_sand_logo_svg()}
+            <div>
+              <div class="eyebrow">Ministry Operations View</div>
+              <h1>Sand Health Bulletin</h1>
+              <p>Decision dashboard backed by validated report-ready metrics.</p>
+            </div>
+          </div>
+        </div>
+        """
+    ).strip()
+
+
+def _sand_logo_svg() -> str:
+    """Return an inline Sand Technologies-style page logo for the dashboard header."""
+
+    return dedent(
+        """
+    <svg class="sand-logo" viewBox="0 0 640 300" role="img" aria-label="Sand Technologies">
+      <defs>
+        <linearGradient id="sand-a-gradient" x1="132" y1="210" x2="302" y2="50" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#16e1cf"/>
+          <stop offset="0.52" stop-color="#24bfd3"/>
+          <stop offset="1" stop-color="#4330a0"/>
+        </linearGradient>
+        <linearGradient id="sand-a-tail-gradient" x1="205" y1="205" x2="315" y2="160" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#16e1cf"/>
+          <stop offset="1" stop-color="#8636aa"/>
+        </linearGradient>
+      </defs>
+      <text x="0" y="205" class="sand-logo-word sand-logo-s">S</text>
+      <path d="M142 177 L202 65 C214 42 249 42 262 65 L309 153 C323 180 303 212 273 212 L176 212 C147 212 128 184 142 177 Z" fill="url(#sand-a-gradient)"/>
+      <path d="M198 184 C229 151 266 140 292 161 C314 178 312 212 276 212 L176 212 C180 202 188 193 198 184 Z" fill="url(#sand-a-tail-gradient)"/>
+      <text x="326" y="205" class="sand-logo-word">ND</text>
+      <text x="2" y="288" class="sand-logo-sub">TECHNOLOGIES</text>
+    </svg>
+    """
+    ).strip()
+
+
 def _inject_styles() -> None:
     st.markdown(
         """
@@ -603,8 +817,40 @@ def _inject_styles() -> None:
             background: linear-gradient(135deg, #0f3f4a 0%, #17695b 58%, #d9b45b 100%);
             border-radius: 8px;
             color: white;
-            margin-bottom: 1rem;
+            margin: .45rem 0 1rem;
+            overflow: hidden;
             padding: 1.2rem 1.4rem;
+        }
+        .brand-block {
+            align-items: center;
+            display: flex;
+            gap: 1.25rem;
+        }
+        .sand-logo {
+            background: rgba(255,255,255,.92);
+            border-radius: 8px;
+            box-shadow: 0 12px 32px rgba(0,0,0,.18);
+            flex: 0 0 210px;
+            height: auto;
+            max-width: 210px;
+            padding: .6rem .75rem;
+        }
+        .sand-logo-word {
+            fill: #080b29;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 220px;
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+        .sand-logo-s {
+            letter-spacing: 0;
+        }
+        .sand-logo-sub {
+            fill: #080b29;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 58px;
+            font-weight: 900;
+            letter-spacing: 13px;
         }
         .app-hero h1 {
             color: white;
@@ -657,6 +903,16 @@ def _inject_styles() -> None:
             color: #314052;
             font-size: .92rem;
             line-height: 1.45;
+        }
+        @media (max-width: 720px) {
+            .brand-block {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: .9rem;
+            }
+            .sand-logo {
+                max-width: 180px;
+            }
         }
         </style>
         """,

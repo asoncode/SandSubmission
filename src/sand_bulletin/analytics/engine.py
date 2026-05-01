@@ -23,6 +23,11 @@ from sand_bulletin.nowcasting import build_nowcast_metrics
 
 METRIC_VERSION = "slice8_v1"
 RATE_PER_1000 = 1000.0
+STATIC_SNAPSHOT_CONTEXT = (
+    "Static facility, governance, workforce, and operations inputs are treated as latest-available "
+    "facility context for the clinical reporting period; future-dated context rows are flagged in "
+    "the data quality layer."
+)
 
 
 class AnalyticsBlockedError(RuntimeError):
@@ -449,9 +454,12 @@ def _performance_score_metrics(
                 "score_0_100",
                 "governance_facility,operations_facility",
                 component_columns + ["quality_improvement_active"],
-                "mean available reporting/governance/quality/referral components * 100",
+                "mean available reporting/governance/quality/referral components * 100; static context treated as latest available snapshot",
                 facility_id=str(row["facility_id"]),
-                trace_payload={"component_count": len(components)},
+                trace_payload={
+                    "component_count": len(components),
+                    "snapshot_context": STATIC_SNAPSHOT_CONTEXT,
+                },
             )
         )
     return metrics
@@ -570,9 +578,12 @@ def _readiness_score_metrics(
                     "score_0_100",
                     "facilities,governance_facility,operations_facility,workforce_facility",
                     _readiness_source_fields(),
-                    f"{name} readiness subscore normalized to 0-100",
+                    f"{name} readiness subscore normalized to 0-100; static context treated as latest available snapshot",
                     facility_id=facility_id,
-                    trace_payload={"component": name},
+                    trace_payload={
+                        "component": name,
+                        "snapshot_context": STATIC_SNAPSHOT_CONTEXT,
+                    },
                 )
             )
         metrics.append(
@@ -586,9 +597,9 @@ def _readiness_score_metrics(
                 "score_0_100",
                 "facilities,governance_facility,operations_facility,workforce_facility",
                 _readiness_source_fields(),
-                "weighted readiness score: equipment 30%, workforce 25%, operations 25%, governance 20%",
+                "weighted readiness score: equipment 30%, workforce 25%, operations 25%, governance 20%; static context treated as latest available snapshot",
                 facility_id=facility_id,
-                trace_payload=components,
+                trace_payload={**components, "snapshot_context": STATIC_SNAPSHOT_CONTEXT},
             )
         )
     return metrics
@@ -684,9 +695,13 @@ def _vulnerability_score_metrics(
                     "hmis_reporting_completeness",
                     "infection_prevention_score",
                 ],
-                "weighted vulnerability score combining outcome burden, trend, workload, readiness gap, workforce, operations, and governance",
+                "weighted vulnerability score combining outcome burden, trend, workload, readiness gap, workforce, operations, and governance; static context treated as latest available snapshot",
                 facility_id=facility_id,
-                trace_payload={**components, "explanation": explanation},
+                trace_payload={
+                    **components,
+                    "explanation": explanation,
+                    "snapshot_context": STATIC_SNAPSHOT_CONTEXT,
+                },
             )
         )
     for rank, row in enumerate(sorted(scored_rows, key=lambda item: (-float(item["score"]), str(item["facility_id"])))[:10], start=1):
