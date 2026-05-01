@@ -1,0 +1,54 @@
+[project]
+name = "sand-healthcare-bulletin"
+version = "0.1.0"
+description = "Automated quarterly health bulletin MVP for DHIS2-style facility aggregate data."
+requires-python = ">=3.11"
+dependencies = [
+  "alembic>=1.13",
+  "fastapi>=0.111",
+  "openpyxl>=3.1",
+  "openai>=2.0",
+  "pandas>=2.2",
+  "psycopg[binary]>=3.2",
+  "pydantic>=2.7",
+  "python-multipart>=0.0.9",
+  "sqlalchemy>=2.0",
+  "streamlit>=1.37",
+  "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.10",
+  "pytest>=8.2",
+  "ruff>=0.5",
+]
+reports = [
+  "jinja2>=3.1",
+  "matplotlib>=3.9",
+  "weasyprint>=62.0",
+]
+
+[project.scripts]
+sand-bulletin = "sand_bulletin.cli:main"
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: sand-healthcare-bulletin
+Version: 0.1.0
+Summary: Automated quarterly health bulletin MVP for DHIS2-style facility aggregate data.
+Requires-Python: >=3.11
+Requires-Dist: alembic>=1.13
+Requires-Dist: fastapi>=0.111
+Requires-Dist: openpyxl>=3.1
+Requires-Dist: openai>=2.0
+Requires-Dist: pandas>=2.2
+Requires-Dist: psycopg[binary]>=3.2
+Requires-Dist: pydantic>=2.7
+Requires-Dist: python-multipart>=0.0.9
+Requires-Dist: sqlalchemy>=2.0
+Requires-Dist: streamlit>=1.37
+Requires-Dist: uvicorn[standard]>=0.30
+Provides-Extra: dev
+Requires-Dist: mypy>=1.10; extra == "dev"
+Requires-Dist: pytest>=8.2; extra == "dev"
+Requires-Dist: ruff>=0.5; extra == "dev"
+Provides-Extra: reports
+Requires-Dist: jinja2>=3.1; extra == "reports"
+Requires-Dist: matplotlib>=3.9; extra == "reports"
+Requires-Dist: weasyprint>=62.0; extra == "reports"

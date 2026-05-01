@@ -1,0 +1,2 @@
+[console_scripts]
+sand-bulletin = sand_bulletin.cli:main

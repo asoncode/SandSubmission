@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Quarterly Health Bulletin</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 14mm 16mm;
+      @bottom-left { content: "Quarterly Health Bulletin · {{ country_code }}"; color: #53616f; font-size: 8pt; }
+      @bottom-right { content: "Page " counter(page) " of " counter(pages); color: #53616f; font-size: 8pt; }
+    }
+    body {
+      color: #17202a;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 9.8pt;
+      line-height: 1.38;
+      margin: 0;
+    }
+    .cover {
+      min-height: 690px;
+    }
+    .masthead {
+      align-items: start;
+      border-left: 16px solid #42536c;
+      display: grid;
+      grid-template-columns: 1fr 150px;
+      min-height: 130px;
+      padding: 18px 0 0 22px;
+    }
+    .ministry {
+      color: #1e2d3f;
+      font-size: 10pt;
+      font-weight: 700;
+      line-height: 1.35;
+      text-align: right;
+      text-transform: uppercase;
+    }
+    .title-band {
+      background: #dff0d5;
+      border: 2px solid #1c5f32;
+      display: grid;
+      grid-template-columns: 1fr 72px;
+      margin: 36px 0 14px 22px;
+    }
+    .title-band .main {
+      color: #1f6d2a;
+      font-size: 19pt;
+      font-weight: 800;
+      line-height: 1.22;
+      padding: 12px 16px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .title-band .period {
+      align-items: center;
+      background: #4baa32;
+      color: white;
+      display: flex;
+      font-size: 18pt;
+      font-weight: 800;
+      justify-content: center;
+      text-align: center;
+    }
+    .preview-ribbon {
+      background: #8a2f00;
+      color: white;
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: .04em;
+      margin-bottom: 18px;
+      padding: 8px 10px;
+      text-transform: uppercase;
+    }
+    h1 {
+      color: #123c69;
+      color: #0876bf;
+      font-size: 32pt;
+      line-height: 1.05;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+    }
+    h2 {
+      border-bottom: 2px solid #d6e4e5;
+      color: #123c69;
+      font-size: 14pt;
+      margin: 18px 0 10px;
+      padding-bottom: 5px;
+      text-transform: uppercase;
+    }
+    .section-title {
+      background: #eaf4ef;
+      border-left: 6px solid #17695b;
+      color: #123c69;
+      font-size: 14pt;
+      font-weight: 800;
+      margin: 18px 0 10px;
+      padding: 7px 10px;
+      text-transform: uppercase;
+    }
+    h3 {
+      color: #166a5a;
+      font-size: 12pt;
+      margin: 16px 0 6px;
+    }
+    .meta {
+      color: #53616f;
+      font-size: 12pt;
+      margin-top: 14px;
+    }
+    .kpi-grid {
+      display: grid;
+      gap: 9px;
+      grid-template-columns: repeat(3, 1fr);
+      margin: 18px 0;
+    }
+    .kpi {
+      border: 1px solid #ccd8da;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .kpi .label {
+      color: #53616f;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+    }
+    .kpi .value {
+      color: #123c69;
+      font-size: 18pt;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      font-size: 8.8pt;
+      margin: 8px 0 12px;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #d7e0e2;
+      padding: 5px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #eef5f4;
+      color: #123c69;
+      font-weight: 700;
+    }
+    .note {
+      background: #f4f7f8;
+      border-left: 4px solid #166a5a;
+      margin: 12px 0;
+      padding: 10px 12px;
+    }
+    .status {
+      border: 1px solid #d7e0e2;
+      border-left: 8px solid #166a5a;
+      margin: 14px 0;
+      padding: 12px 14px;
+    }
+    .status.critical {
+      background: #fff4ed;
+      border-left-color: #b64000;
+    }
+    .status.ready {
+      background: #f0f8f5;
+      border-left-color: #166a5a;
+    }
+    .status .label {
+      color: #123c69;
+      font-size: 13pt;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .warning {
+      background: #fff6e5;
+      border-left-color: #b66a00;
+    }
+    .bar-track {
+      background: #e7eef0;
+      height: 8px;
+      margin-top: 4px;
+      width: 100%;
+    }
+    .bar-fill {
+      background: #166a5a;
+      height: 8px;
+    }
+    .page-break {
+      break-before: page;
+    }
+    .small {
+      color: #53616f;
+      font-size: 8.5pt;
+    }
+    .hero-visual {
+      background: linear-gradient(135deg, #e8f3f5, #f7fbf7);
+      border-bottom: 5px solid #85bfa5;
+      border-top: 5px solid #85bfa5;
+      margin: 12px 0 18px 22px;
+      padding: 22px 26px;
+    }
+    .hero-visual .headline {
+      color: #123c69;
+      font-size: 15pt;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .summary-box {
+      background: #f6f9fa;
+      border-left: 5px solid #0876bf;
+      margin: 12px 0;
+      padding: 10px 12px;
+    }
+    .chart-block {
+      break-inside: avoid;
+      margin: 12px 0 18px;
+    }
+    .chart-block img {
+      border: 1px solid #d9e2e3;
+      width: 100%;
+    }
+    .caption {
+      color: #53616f;
+      font-size: 8.3pt;
+      margin-top: 4px;
+    }
+    .takeaway {
+      background: #f1f7f6;
+      border-left: 4px solid #17695b;
+      color: #17202a;
+      margin-top: 6px;
+      padding: 7px 9px;
+    }
+    .two-col {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .key-message {
+      background: #eef5fb;
+      border-left: 5px solid #0876bf;
+      padding: 10px 12px;
+    }
+    .recommendations li {
+      margin-bottom: 6px;
+    }
+    .toc {
+      columns: 2;
+      column-gap: 28px;
+      margin-top: 10px;
+    }
+    .toc div {
+      border-bottom: 1px dotted #aab8bf;
+      break-inside: avoid;
+      margin-bottom: 7px;
+      padding-bottom: 4px;
+    }
+    .method {
+      font-size: 8.7pt;
+    }
+    .pill {
+      background: #eef5f4;
+      border: 1px solid #c9dad7;
+      border-radius: 10px;
+      display: inline-block;
+      font-size: 8pt;
+      margin: 2px 3px 2px 0;
+      padding: 2px 7px;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="masthead">
+      <div>
+        <h1>Quarterly Health Bulletin</h1>
+        <div class="meta">{{ country_code }} · {{ period_start }} to {{ period_end }}</div>
+      </div>
+      <div class="ministry">Ministry of Health<br>Automated Bulletin System</div>
+    </div>
+    {% if is_preview %}
+    <div class="preview-ribbon">Preview only · not cleared for official publication</div>
+    {% endif %}
+    <div class="title-band">
+      <div class="main">Reproductive, Maternal, Newborn, Child and Adolescent Health Intelligence Bulletin</div>
+      <div class="period">Q<br>2024</div>
+    </div>
+    <div class="hero-visual">
+      <div class="headline">{{ briefs.headline }}</div>
+      <p>
+        This bulletin converts standardized facility aggregate data into validated indicators, explanatory charts,
+        and operational recommendations. All figures are computed from report-ready metrics, with source-field traceability
+        retained in the Excel workbook.
+      </p>
+      <p class="small">Generated run {{ run_id }} · Narrative mode: {{ narrative.mode if narrative else "deterministic" }}</p>
+    </div>
+    <div class="status {{ reliability_status.tone }}">
+      <div class="label">Data Reliability Status: {{ reliability_status.label }}</div>
+      <div>{{ reliability_status.message }}</div>
+    </div>
+    <div class="note">
+      Analysis mode: {{ analysis_mode }}.
+      {% if resolution_summary.decision_count %}
+      Clinical resolution reviewed {{ resolution_summary.decision_count }} repeated facility-month groups;
+      {{ resolution_summary.selected_groups }} selected/collapsed and {{ resolution_summary.unresolved_groups }} excluded as unresolved.
+      {% endif %}
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Deliveries</div><div class="value">{{ format_number(kpis.total_deliveries, 0) }}</div></div>
+      <div class="kpi"><div class="label">Live births</div><div class="value">{{ format_number(kpis.live_births, 0) }}</div></div>
+      <div class="kpi"><div class="label">Neonatal mortality</div><div class="value">{{ format_number(kpis.neonatal_mortality_rate_per_1000_live_births, 1) }}</div></div>
+      <div class="kpi"><div class="label">Stillbirth rate</div><div class="value">{{ format_number(kpis.stillbirth_rate_per_1000_deliveries, 1) }}</div></div>
+      <div class="kpi"><div class="label">Low birth weight</div><div class="value">{{ format_number(kpis.low_birth_weight_rate_pct, 1) }}%</div></div>
+      <div class="kpi"><div class="label">Preterm birth</div><div class="value">{{ format_number(kpis.preterm_birth_rate_pct, 1) }}%</div></div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <div class="section-title">Table of Contents</div>
+    <div class="toc">
+      <div>1. Executive Summary</div>
+      <div>2. National Overview</div>
+      <div>3. Monthly Trend Analysis</div>
+      <div>4. Cause of Neonatal Death Analysis</div>
+      <div>5. Quarter-over-Quarter Comparison</div>
+      <div>6. Provincial Analysis</div>
+      <div>7. Top 10 Facilities by Delivery Volume</div>
+      <div>8. Facility Readiness and Vulnerability Analysis</div>
+      <div>9. Priority Intervention Facilities</div>
+      <div>10. Data Quality Assessment</div>
+      <div>11. Cross-Facility Anomaly Detection</div>
+      <div>12. Recommendations</div>
+      <div>13. Methodology and Limitations</div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <div class="section-title">1. Executive Summary</div>
+    {% if narrative %}
+    <p>{{ narrative.executive_summary }}</p>
+    {% else %}
+    <p>
+      The reporting period contains {{ format_number(kpis.total_deliveries, 0) }} deliveries and {{ format_number(kpis.live_births, 0) }} live births across the submitted facility network.
+      The neonatal mortality rate is {{ format_number(kpis.neonatal_mortality_rate_per_1000_live_births, 1) }} per 1,000 live births, while the stillbirth rate is {{ format_number(kpis.stillbirth_rate_per_1000_deliveries, 1) }} per 1,000 deliveries.
+    </p>
+    {% endif %}
+    <p>
+      {{ briefs.reliability }}
+    </p>
+    <div class="summary-box">{{ briefs.geography }}</div>
+    {% if charts.monthly_nmr %}
+    <div class="chart-block">
+      <img src="{{ charts.monthly_nmr.image_uri }}" alt="{{ charts.monthly_nmr.title }}">
+      <div class="caption">{{ charts.monthly_nmr.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.monthly_nmr.takeaway }}</div>
+    </div>
+    {% endif %}
+  </section>
+
+  <section>
+    <div class="section-title">2. National Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Deliveries</div><div class="value">{{ format_number(kpis.total_deliveries, 0) }}</div></div>
+      <div class="kpi"><div class="label">Live births</div><div class="value">{{ format_number(kpis.live_births, 0) }}</div></div>
+      <div class="kpi"><div class="label">NMR</div><div class="value">{{ format_number(kpis.neonatal_mortality_rate_per_1000_live_births, 1) }}</div></div>
+      <div class="kpi"><div class="label">Stillbirth rate</div><div class="value">{{ format_number(kpis.stillbirth_rate_per_1000_deliveries, 1) }}</div></div>
+      <div class="kpi"><div class="label">Preterm rate</div><div class="value">{{ format_number(kpis.preterm_birth_rate_pct, 1) }}%</div></div>
+      <div class="kpi"><div class="label">Low birth weight</div><div class="value">{{ format_number(kpis.low_birth_weight_rate_pct, 1) }}%</div></div>
+    </div>
+    <p>{{ briefs.early_late }}</p>
+  </section>
+
+  <section>
+    <div class="section-title">3. Monthly Trend Analysis</div>
+    {% if charts.monthly_volume %}
+    <div class="chart-block">
+      <img src="{{ charts.monthly_volume.image_uri }}" alt="{{ charts.monthly_volume.title }}">
+      <div class="caption">{{ charts.monthly_volume.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.monthly_volume.takeaway }}</div>
+    </div>
+    {% endif %}
+    {% if charts.monthly_nmr %}
+    <div class="chart-block">
+      <img src="{{ charts.monthly_nmr.image_uri }}" alt="{{ charts.monthly_nmr.title }}">
+      <div class="caption">{{ charts.monthly_nmr.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.monthly_nmr.takeaway }}</div>
+    </div>
+    {% endif %}
+  </section>
+
+  <section>
+    <div class="section-title">4. Cause of Neonatal Death Analysis</div>
+    {% if charts.cause_of_death %}
+    <div class="chart-block">
+      <img src="{{ charts.cause_of_death.image_uri }}" alt="{{ charts.cause_of_death.title }}">
+      <div class="caption">{{ charts.cause_of_death.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.cause_of_death.takeaway }}</div>
+    </div>
+    {% endif %}
+    <table>
+      <thead><tr><th>Cause</th><th>Share of neonatal deaths</th></tr></thead>
+      <tbody>
+      {% for row in cause_table %}
+        <tr><td>{{ row.cause }}</td><td>{{ format_number(row.share_pct, 1) }}%</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">5. Quarter-over-Quarter Comparison</div>
+    {% if charts.quarter_comparison %}
+    <div class="chart-block">
+      <img src="{{ charts.quarter_comparison.image_uri }}" alt="{{ charts.quarter_comparison.title }}">
+      <div class="caption">{{ charts.quarter_comparison.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.quarter_comparison.takeaway }}</div>
+    </div>
+    {% endif %}
+    <table>
+      <thead><tr><th>Indicator</th><th>Previous</th><th>Current</th><th>Change</th><th>Signal</th></tr></thead>
+      <tbody>
+      {% for row in qoq_table %}
+        <tr><td>{{ row.indicator }}</td><td>{{ format_number(row.previous, 0) }}</td><td>{{ format_number(row.current, 0) }}</td><td>{{ format_number(row.pct_change, 1) }}%</td><td>{{ row.signal }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">6. Provincial Analysis</div>
+    <p>{{ briefs.geography }}</p>
+    {% if charts.province_nmr %}
+    <div class="chart-block">
+      <img src="{{ charts.province_nmr.image_uri }}" alt="{{ charts.province_nmr.title }}">
+      <div class="caption">{{ charts.province_nmr.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.province_nmr.takeaway }}</div>
+    </div>
+    {% endif %}
+    <table>
+      <thead><tr><th>Province</th><th>Deliveries</th><th>Live births</th><th>NMR</th><th>Stillbirth rate</th></tr></thead>
+      <tbody>
+      {% for row in province_table %}
+        <tr><td>{{ row.geography_id }}</td><td>{{ format_number(row.total_deliveries, 0) }}</td><td>{{ format_number(row.live_births, 0) }}</td><td>{{ format_number(row.neonatal_mortality_rate_per_1000_live_births, 1) }}</td><td>{{ format_number(row.stillbirth_rate_per_1000_deliveries, 1) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">7. Top 10 Facilities by Delivery Volume</div>
+    {% if charts.top_delivery_volume %}
+    <div class="chart-block">
+      <img src="{{ charts.top_delivery_volume.image_uri }}" alt="{{ charts.top_delivery_volume.title }}">
+      <div class="caption">{{ charts.top_delivery_volume.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.top_delivery_volume.takeaway }}</div>
+    </div>
+    {% endif %}
+    <table>
+      <thead><tr><th>Facility</th><th>Deliveries</th></tr></thead>
+      <tbody>
+      {% for row in top_volume %}
+        <tr><td>{{ row.facility_display }}</td><td>{{ format_number(row.metric_value, 0) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">8. Facility Readiness and Vulnerability Analysis</div>
+    {% if charts.readiness_distribution %}
+    <div class="chart-block">
+      <img src="{{ charts.readiness_distribution.image_uri }}" alt="{{ charts.readiness_distribution.title }}">
+      <div class="caption">{{ charts.readiness_distribution.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.readiness_distribution.takeaway }}</div>
+    </div>
+    {% endif %}
+    {% if charts.vulnerability_watchlist %}
+    <div class="chart-block">
+      <img src="{{ charts.vulnerability_watchlist.image_uri }}" alt="{{ charts.vulnerability_watchlist.title }}">
+      <div class="caption">{{ charts.vulnerability_watchlist.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.vulnerability_watchlist.takeaway }}</div>
+    </div>
+    {% endif %}
+    {% if charts.readiness_outcomes %}
+    <div class="chart-block">
+      <img src="{{ charts.readiness_outcomes.image_uri }}" alt="{{ charts.readiness_outcomes.title }}">
+      <div class="caption">{{ charts.readiness_outcomes.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.readiness_outcomes.takeaway }}</div>
+    </div>
+    {% endif %}
+    <div class="two-col">
+      <div>
+        <h3>High-volume and high-risk</h3>
+        {% for row in special_facilities.high_volume_high_risk %}<span class="pill">{{ row.facility_display }}</span>{% endfor %}
+      </div>
+      <div>
+        <h3>High mortality, low readiness</h3>
+        {% for row in special_facilities.high_mortality_low_readiness %}<span class="pill">{{ row.facility_display }}</span>{% endfor %}
+      </div>
+    </div>
+    <div class="two-col">
+      <div>
+        <h3>High readiness, poor outcomes</h3>
+        {% for row in special_facilities.high_readiness_poor_outcomes %}<span class="pill">{{ row.facility_display }}</span>{% endfor %}
+      </div>
+      <div>
+        <h3>Unusually low NMR</h3>
+        {% for row in special_facilities.unusually_low_nmr %}<span class="pill">{{ row.facility_display }}</span>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">9. Priority Intervention Facilities</div>
+    {% if decision_outputs_suppressed %}
+    <div class="note warning">
+      Priority rankings, intervention recommendations, and driver analysis are suppressed in raw mode because unresolved duplicate submissions are included as submitted.
+    </div>
+    {% else %}
+    <p class="key-message">{{ briefs.priority }}</p>
+    <p class="small">Priority score formula: normalized neonatal mortality contributes 40%, delivery volume contributes 30%, and vulnerability score contributes 30%.</p>
+    <table>
+      <thead><tr><th>Rank</th><th>Facility</th><th>Score</th><th>Band</th><th>NMR</th><th>Deliveries</th><th>Readiness</th><th>Vulnerability</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for row in priority_facilities %}
+        <tr>
+          <td>{{ row.rank }}</td>
+          <td>{{ row.facility_display }}</td>
+          <td>{{ format_number(row.priority_score, 1) }}</td>
+          <td>{{ row.risk_band }}</td>
+          <td>{{ format_number(row.neonatal_mortality_rate_per_1000_live_births, 1) }}</td>
+          <td>{{ format_number(row.total_deliveries, 0) }}</td>
+          <td>{{ format_number(row.neonatal_readiness_score, 1) }}</td>
+          <td>{{ format_number(row.facility_vulnerability_score, 1) }}</td>
+          <td>Immediate clinical audit, readiness gap review, and supervisor follow-up.</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <h3>Drivers to Investigate</h3>
+    <ul class="recommendations">
+      {% for insight in driver_insights %}
+      <li>{{ insight }}</li>
+      {% endfor %}
+    </ul>
+    <p class="small">Score bands: 0-39 low, 40-59 moderate, 60-79 high, 80+ critical.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <div class="section-title">10. Data Quality Assessment</div>
+    <p>
+      Inputs include clinical neonatal, facilities, governance, healthcare workers, and operations files.
+      The generated metrics layer contains {{ metric_count }} traceable records. {{ briefs.reliability }}
+    </p>
+    {% if charts.data_quality %}
+    <div class="chart-block">
+      <img src="{{ charts.data_quality.image_uri }}" alt="{{ charts.data_quality.title }}">
+      <div class="caption">{{ charts.data_quality.caption }}</div>
+      <div class="takeaway"><strong>Interpretation:</strong> {{ charts.data_quality.takeaway }}</div>
+    </div>
+    {% endif %}
+    <div class="two-col">
+      <div>
+        <h3>Issue Counts</h3>
+        <table>
+          <thead><tr><th>Severity</th><th>Issue count</th></tr></thead>
+          <tbody>
+          {% for severity, count in issue_counts.items() %}
+            <tr><td>{{ severity }}</td><td>{{ count }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Analysis Mode</h3>
+        <table>
+          <tbody>
+            <tr><th>Mode</th><td>{{ analysis_mode }}</td></tr>
+            <tr><th>Groups reviewed</th><td>{{ resolution_summary.decision_count }}</td></tr>
+            <tr><th>Selected/collapsed</th><td>{{ resolution_summary.selected_groups }}</td></tr>
+            <tr><th>Unresolved excluded</th><td>{{ resolution_summary.unresolved_groups }}</td></tr>
+            <tr><th>Affected months</th><td>{{ dq_summary.affected_months }}</td></tr>
+            <tr><th>Affected facilities</th><td>{{ dq_summary.affected_facilities }}</td></tr>
+            <tr><th>Publication status</th><td>{{ dq_summary.publication_status }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">11. Cross-Facility Anomaly Detection</div>
+    <p>
+      Anomaly flags identify unusual reporting or outcome patterns, including large delivery shifts,
+      mortality spikes, and extended zero-death reporting. These are not diagnoses; they are prompts for validation and supervisory review.
+    </p>
+    <table>
+      <thead><tr><th>Facility</th><th>Anomaly flags</th></tr></thead>
+      <tbody>
+      {% for row in top_vulnerability %}
+        <tr><td>{{ row.facility_display }}</td><td>Review vulnerability and outcome pattern</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">12. Recommendations</div>
+    {% if narrative %}
+    <p>{{ narrative.facility_watchlist_explanation }}</p>
+    {% endif %}
+    <h3>Immediate actions this week</h3>
+    <ul class="recommendations">{% for item in briefs.recommendations.immediate %}<li>{{ item }}</li>{% endfor %}</ul>
+    <h3>Data validation actions before publication</h3>
+    <ul class="recommendations">{% for item in briefs.recommendations.validation %}<li>{{ item }}</li>{% endfor %}</ul>
+    <h3>Facility support actions</h3>
+    <ul class="recommendations">{% for item in briefs.recommendations.facility_support %}<li>{{ item }}</li>{% endfor %}</ul>
+    <h3>Program-level actions</h3>
+    <ul class="recommendations">{% for item in briefs.recommendations.program %}<li>{{ item }}</li>{% endfor %}</ul>
+    <h3>Follow-up monitoring actions</h3>
+    <ul class="recommendations">{% for item in briefs.recommendations.monitoring %}<li>{{ item }}</li>{% endfor %}</ul>
+  </section>
+
+  <section>
+    <div class="section-title">13. Methodology and Limitations</div>
+    <div class="method">
+      <p><strong>Data sources.</strong> The bulletin uses the five MVP files: clinical neonatal, facilities, governance, healthcare workers, and operations. All dashboard, PDF, Excel, and narrative outputs read from computed report-ready metrics or validated analytics packages.</p>
+      <p><strong>Reporting period.</strong> {{ period_start }} to {{ period_end }}. Static governance, workforce, and operations files are treated as current snapshots for the clinical period.</p>
+      <p><strong>NMR.</strong> Neonatal mortality rate = (early neonatal deaths + late neonatal deaths) / live births × 1,000.</p>
+      <p><strong>Stillbirth rate.</strong> Stillbirth rate = stillbirths / total deliveries × 1,000.</p>
+      <p><strong>Preterm and LBW rates.</strong> Preterm rate = preterm births / live births × 100. Low-birth-weight rate = births &lt;2,500g / live births × 100.</p>
+      <p><strong>Performance score.</strong> Mean available governance, reporting, quality, protocol, and referral-feedback components scaled to 0-100.</p>
+      <p><strong>Readiness score.</strong> Weighted score: equipment 30%, workforce 25%, operations 25%, governance 20%.</p>
+      <p><strong>Vulnerability index.</strong> Weighted composite of outcome burden, mortality change, workload, readiness gap, workforce pressure, operational weakness, and governance weakness.</p>
+      <p><strong>Priority score.</strong> Normalized NMR 40%, delivery volume 30%, and vulnerability score 30%.</p>
+      <p><strong>Anomaly detection.</strong> Transparent heuristic flags compare current facility patterns with prior reporting periods and threshold-based outcome checks.</p>
+      <p><strong>Limitations.</strong> The MVP uses aggregate facility data, not patient-level records. Repeated facility-month submissions require reconciliation. Nowcasting is exploratory and is emitted only when a transparent model beats the last-value baseline in backtesting.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Appendix A. Supporting Indicator Tables</div>
+    {% if narrative %}
+    <h3>Key Findings</h3>
+    <ul>
+      {% for finding in narrative.key_findings %}
+      <li>{{ finding }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <h3>Facilities with Highest Neonatal Mortality Rate</h3>
+    <table>
+      <thead><tr><th>Facility</th><th>NMR per 1,000 live births</th></tr></thead>
+      <tbody>
+      {% for row in top_mortality %}
+        <tr><td>{{ row.facility_display }}</td><td>{{ format_number(row.metric_value, 1) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">Appendix B. Facility Readiness and Vulnerability Tables</div>
+    <h3>Highest Neonatal Readiness Scores</h3>
+    <table>
+      <thead><tr><th>Facility</th><th>Readiness score</th></tr></thead>
+      <tbody>
+      {% for row in top_readiness %}
+        <tr><td>{{ row.facility_display }}</td><td>{{ format_number(row.metric_value, 1) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Top 10 Facilities Requiring Follow-up</h3>
+    <table>
+      <thead><tr><th>Rank</th><th>Facility</th><th>Vulnerability</th><th>Band</th><th>Reason</th></tr></thead>
+      <tbody>
+      {% for row in watchlist %}
+        <tr>
+          <td>{{ format_number(row.metric_value, 0) }}</td>
+          <td>{{ row.facility_display }}</td>
+          <td>{{ format_number(row.trace_payload.vulnerability_score, 1) if row.trace_payload else "-" }}</td>
+          <td>{{ score_band(row.trace_payload.vulnerability_score) if row.trace_payload else "Unknown" }}</td>
+          <td>{{ row.trace_payload.explanation if row.trace_payload else "Flagged by vulnerability score." }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Highest Vulnerability Scores</h3>
+    <table>
+      <thead><tr><th>Facility</th><th>Vulnerability score</th></tr></thead>
+      <tbody>
+      {% for row in top_vulnerability %}
+        <tr><td>{{ row.facility_display }}</td><td>{{ format_number(row.metric_value, 1) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">Appendix C. Nowcasting Prototype</div>
+    <div class="note">
+      Nowcast estimates are emitted only when a transparent model beats the last-value baseline during backtesting. They are planning estimates, not official reported values.
+    </div>
+    <h3>Expected Delivery Volume Next Month</h3>
+    <table>
+      <thead><tr><th>Facility</th><th>Estimated deliveries</th></tr></thead>
+      <tbody>
+      {% for row in top_nowcast_deliveries %}
+        <tr><td>{{ row.facility_display }}</td><td>{{ format_number(row.metric_value, 0) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Highest Estimated Facility Stress</h3>
+    <table>
+      <thead><tr><th>Facility</th><th>Probability</th></tr></thead>
+      <tbody>
+      {% for row in top_nowcast_stress %}
+        <tr><td>{{ row.facility_display }}</td><td>{{ format_number(row.metric_value, 2) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">Appendix D. District Trend Analysis</div>
+    <table>
+      <thead><tr><th>District</th><th>Deliveries change %</th><th>Neonatal deaths change %</th><th>Stillbirths change %</th></tr></thead>
+      <tbody>
+      {% for row in district_trends %}
+        <tr>
+          <td>{{ row.geography_id }}</td>
+          <td>{{ format_number(row.total_deliveries_pct_change, 1) }}</td>
+          <td>{{ format_number(row.neonatal_deaths_total_pct_change, 1) }}</td>
+          <td>{{ format_number(row.stillbirths_pct_change, 1) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-title">Appendix E. Data Quality Notes</div>
+    <table>
+      <thead><tr><th>Severity</th><th>Type</th><th>Facility</th><th>Month</th><th>Observed</th><th>Suggested action</th></tr></thead>
+      <tbody>
+      {% for row in issue_examples %}
+        <tr>
+          <td>{{ row.severity }}</td>
+          <td>{{ row.issue_type }}</td>
+          <td>{{ row.facility_id or "-" }}</td>
+          <td>{{ row.reporting_month or "-" }}</td>
+          <td>{{ row.observed_value or "-" }}</td>
+          <td>{{ row.suggested_action }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3>Metric references:</h3>
+    <p class="small">{{ narrative.metric_references | join(", ") if narrative else "Deterministic metric package." }}</p>
+  </section>
+</body>
+</html>
