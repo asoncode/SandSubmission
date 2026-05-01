@@ -358,7 +358,71 @@ def _report_tab(
         return
 
     metric_count = len(dataset.metrics)
+    kpis = national_kpis(dataset.metrics_frame)
+    priority = priority_intervention_table(dataset.metrics_frame, limit=5)
+    issue_counts = _issue_counts(dataset.issues_frame)
+
     st.info(f"{metric_count:,} report-ready metric records are available for downstream outputs.")
+    _report_status_cards(dataset, kpis, issue_counts)
+
+    st.markdown("### Bulletin Package")
+    package_cols = st.columns(3)
+    package_cols[0].markdown(
+        """
+        <div class="report-card">
+          <div class="report-card-title">PDF bulletin</div>
+          <div class="report-card-body">Official-style ministry report with cover, table of contents, charts, interpretation callouts, recommendations, methodology, and data-quality gating.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    package_cols[1].markdown(
+        """
+        <div class="report-card">
+          <div class="report-card-title">HTML bulletin</div>
+          <div class="report-card-body">Browser-readable version of the same bulletin, useful for review, sharing, and checking chart rendering before PDF export.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    package_cols[2].markdown(
+        """
+        <div class="report-card">
+          <div class="report-card-title">Excel workbook</div>
+          <div class="report-card-body">Metric trace, summary KPIs, rankings, trends, nowcasts, clinical resolution audit, and detailed data-quality issue tables.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("### Report Contents")
+    st.write(
+        "The generated bulletin includes executive summary, national overview, monthly trend analysis, "
+        "cause-of-death analysis, quarter-over-quarter comparison, provincial analysis, top delivery "
+        "facilities, readiness and vulnerability analysis, priority intervention facilities, data quality, "
+        "cross-facility anomalies, recommendations, methodology, and limitations."
+    )
+
+    if not priority.empty:
+        st.markdown("### Priority Facilities Included in Report")
+        st.dataframe(
+            priority,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "priority_score": st.column_config.NumberColumn("Priority", format="%.1f"),
+                "total_deliveries": st.column_config.NumberColumn("Deliveries", format="%.0f"),
+                "neonatal_mortality_rate_per_1000_live_births": st.column_config.NumberColumn(
+                    "NMR / 1,000",
+                    format="%.1f",
+                ),
+                "facility_vulnerability_score": st.column_config.NumberColumn(
+                    "Vulnerability",
+                    format="%.1f",
+                ),
+                "neonatal_readiness_score": st.column_config.NumberColumn("Readiness", format="%.1f"),
+            },
+        )
 
     st.markdown("### Analysis Mode Impact")
     st.dataframe(
@@ -380,7 +444,8 @@ def _report_tab(
 
     st.markdown("### Generate Files")
     st.write(
-        "Generates HTML, PDF when local WeasyPrint dependencies are available, and an Excel workbook with metric trace plus clinical resolution audit."
+        "Generates the polished HTML bulletin, PDF bulletin, and Excel workbook from the same "
+        "report-ready metrics used by the dashboard."
     )
     if st.button("Generate bulletin files", type="primary"):
         try:
@@ -394,7 +459,8 @@ def _report_tab(
                 analysis_mode=dataset.analysis_mode,
             )
             st.success(f"Generated report run {generated.run_id}")
-            _artifact_downloads(generated.html_path, generated.excel_path, generated.pdf_path)
+            _generated_report_summary(generated)
+            _artifact_downloads(generated.html_path, generated.excel_path, generated.pdf_path, generated.pdf_status)
             st.code(
                 "\n".join(
                     [
@@ -417,7 +483,37 @@ def _report_tab(
         st.code(str(latest))
 
 
-def _artifact_downloads(html_path: Path, excel_path: Path, pdf_path: Path | None) -> None:
+def _report_status_cards(dataset, kpis: dict[str, float | None], issue_counts: dict[str, int]) -> None:
+    cols = st.columns(4)
+    cols[0].metric("Analysis mode", dataset.analysis_mode.value)
+    cols[1].metric("NMR / 1,000", _format_number(kpis.get("neonatal_mortality_rate_per_1000_live_births"), 1))
+    cols[2].metric("Deliveries", _format_number(kpis.get("total_deliveries"), 0))
+    cols[3].metric("High-severity DQ issues", f"{issue_counts.get('high', 0):,}")
+
+    if issue_counts.get("high", 0):
+        st.warning(
+            "Publication status: preview only. Official publication should remain blocked until "
+            "high-severity data quality issues are resolved or formally signed off."
+        )
+    else:
+        st.success("Publication status: data quality gate is clear for this analysis mode.")
+
+
+def _generated_report_summary(generated) -> None:
+    st.markdown("### Generated Run Summary")
+    cols = st.columns(4)
+    cols[0].metric("Metrics exported", f"{generated.metrics_count:,}")
+    cols[1].metric("DQ issues exported", f"{generated.issues_count:,}")
+    cols[2].metric("PDF status", generated.pdf_status)
+    cols[3].metric("Run ID", generated.run_id[:8])
+
+
+def _artifact_downloads(
+    html_path: Path,
+    excel_path: Path,
+    pdf_path: Path | None,
+    pdf_status: str | None = None,
+) -> None:
     cols = st.columns(3)
     if html_path.exists():
         cols[0].download_button(
@@ -442,6 +538,27 @@ def _artifact_downloads(html_path: Path, excel_path: Path, pdf_path: Path | None
         )
     else:
         cols[2].caption("PDF not available for this run.")
+        if pdf_status:
+            cols[2].caption(pdf_status)
+        cols[2].caption(
+            "On Streamlit Cloud, PDF export requires the repository's packages.txt system "
+            "dependencies to be deployed, then the app must be rebooted."
+        )
+
+
+def _issue_counts(issues: pd.DataFrame) -> dict[str, int]:
+    if issues.empty or "severity" not in issues:
+        return {}
+    counts = issues["severity"].value_counts()
+    return {str(level): int(count) for level, count in counts.items()}
+
+
+def _format_number(value: float | None, digits: int) -> str:
+    if value is None or pd.isna(value):
+        return "n/a"
+    if digits == 0:
+        return f"{float(value):,.0f}"
+    return f"{float(value):,.{digits}f}"
 
 
 def _latest_output_dir(output_dir: Path) -> Path | None:
@@ -451,12 +568,6 @@ def _latest_output_dir(output_dir: Path) -> Path | None:
     if not runs:
         return None
     return max(runs, key=lambda path: path.stat().st_mtime)
-
-
-def _format_number(value: float | None, decimals: int = 0) -> str:
-    if value is None:
-        return "-"
-    return f"{value:,.{decimals}f}"
 
 
 def _reliability_banner(high_count: int, issue_count: int, allow_high: bool) -> None:
@@ -528,6 +639,24 @@ def _inject_styles() -> None:
             color: #123c69;
             font-weight: 800;
             margin-bottom: .15rem;
+        }
+        .report-card {
+            background: #f8fafc;
+            border: 1px solid #d9e2ec;
+            border-radius: 8px;
+            min-height: 128px;
+            padding: 1rem;
+        }
+        .report-card-title {
+            color: #123c69;
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: .4rem;
+        }
+        .report-card-body {
+            color: #314052;
+            font-size: .92rem;
+            line-height: 1.45;
         }
         </style>
         """,
