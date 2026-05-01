@@ -553,7 +553,7 @@ def _issue_counts(issues: pd.DataFrame) -> dict[str, int]:
     return {str(level): int(count) for level, count in counts.items()}
 
 
-def _format_number(value: float | None, digits: int) -> str:
+def _format_number(value: float | None, digits: int = 0) -> str:
     if value is None or pd.isna(value):
         return "n/a"
     if digits == 0:
