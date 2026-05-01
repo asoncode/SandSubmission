@@ -628,7 +628,13 @@ def _report_tab(
             )
             st.success(f"Generated report run {generated.run_id}")
             _generated_report_summary(generated)
-            _artifact_downloads(generated.html_path, generated.excel_path, generated.pdf_path, generated.pdf_status)
+            _artifact_downloads(
+                generated.html_path,
+                generated.excel_path,
+                generated.pdf_path,
+                generated.pdf_status,
+                key_prefix=f"generated-{generated.run_id}",
+            )
             st.code(
                 "\n".join(
                     [
@@ -647,7 +653,12 @@ def _report_tab(
         html = latest / "bulletin.html"
         excel = latest / "bulletin_workbook.xlsx"
         pdf = latest / "bulletin.pdf"
-        _artifact_downloads(html, excel, pdf if pdf.exists() else None)
+        _artifact_downloads(
+            html,
+            excel,
+            pdf if pdf.exists() else None,
+            key_prefix=f"latest-{latest.name}",
+        )
         st.code(str(latest))
 
 
@@ -681,6 +692,7 @@ def _artifact_downloads(
     excel_path: Path,
     pdf_path: Path | None,
     pdf_status: str | None = None,
+    key_prefix: str = "artifact",
 ) -> None:
     cols = st.columns(3)
     if html_path.exists():
@@ -689,6 +701,7 @@ def _artifact_downloads(
             html_path.read_bytes(),
             file_name=html_path.name,
             mime="text/html",
+            key=f"{key_prefix}-html-{html_path}",
         )
     if excel_path.exists():
         cols[1].download_button(
@@ -696,6 +709,7 @@ def _artifact_downloads(
             excel_path.read_bytes(),
             file_name=excel_path.name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"{key_prefix}-excel-{excel_path}",
         )
     if pdf_path and pdf_path.exists():
         cols[2].download_button(
@@ -703,6 +717,7 @@ def _artifact_downloads(
             pdf_path.read_bytes(),
             file_name=pdf_path.name,
             mime="application/pdf",
+            key=f"{key_prefix}-pdf-{pdf_path}",
         )
     else:
         cols[2].caption("PDF not available for this run.")
